@@ -1,0 +1,277 @@
+/* ==========================================================================
+   Subscription Tracker & Renewal Dashboard
+   ========================================================================== */
+
+:root {
+  --bg: #0f1219;
+  --surface: #171b26;
+  --surface-2: #1e2331;
+  --border: #2a3040;
+  --text: #e8eaf0;
+  --text-muted: #99a1b3;
+  --accent: #5b8cff;
+  --accent-soft: rgba(91, 140, 255, 0.14);
+  --amber: #f5a524;
+  --amber-soft: rgba(245, 165, 36, 0.13);
+  --danger: #f45b5b;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+/* --- Masthead ------------------------------------------------------------ */
+
+.masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+.masthead__sub {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* --- Panels -------------------------------------------------------------- */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  margin-bottom: 24px;
+}
+
+.panel__title {
+  margin: 0 0 18px;
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+
+/* --- Entry form ---------------------------------------------------------- */
+
+.entry-form {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1.1fr auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field--action {
+  justify-content: flex-start;
+  padding-top: 25px;
+}
+
+.field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.field input,
+.field select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field input:focus,
+.field select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.field input[aria-invalid="true"],
+.field select[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.field__error {
+  margin: 0;
+  min-height: 14px;
+  font-size: 12px;
+  color: var(--danger);
+}
+
+/* --- Buttons ------------------------------------------------------------- */
+
+.btn {
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.form-status {
+  margin: 14px 0 0;
+  font-size: 13px;
+  min-height: 18px;
+  color: var(--text-muted);
+}
+
+.form-status--error {
+  color: var(--danger);
+}
+
+.form-status--success {
+  color: #4ec98a;
+}
+
+/* --- Subscription grid --------------------------------------------------- */
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.grid th,
+.grid td {
+  text-align: left;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.grid thead th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom-color: var(--border);
+}
+
+.grid tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.grid tbody tr {
+  transition: background 0.15s ease, opacity 0.2s ease;
+}
+
+.grid tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.grid .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.service-name {
+  font-weight: 600;
+}
+
+.cycle-tag {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.empty-state {
+  margin: 24px 0 4px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* --- Responsive ---------------------------------------------------------- */
+
+@media (max-width: 880px) {
+  .entry-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .field--action {
+    grid-column: 1 / -1;
+    padding-top: 4px;
+  }
+
+  .field--action .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .shell {
+    padding: 20px 14px 48px;
+  }
+
+  .entry-form {
+    grid-template-columns: 1fr;
+  }
+}

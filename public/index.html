@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subscription Tracker &amp; Renewal Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>" />
+  <link rel="stylesheet" href="/styles/main.css" />
+</head>
+<body>
+  <div class="shell">
+    <header class="masthead">
+      <div>
+        <h1>Subscription Tracker</h1>
+        <p class="masthead__sub">Recurring SaaS &amp; streaming spend, renewals, and monthly burn.</p>
+      </div>
+    </header>
+
+    <main>
+      <!-- ENTRY FORM -->
+      <section class="panel" aria-labelledby="form-heading">
+        <h2 id="form-heading" class="panel__title">Add a subscription</h2>
+
+        <form id="subscription-form" class="entry-form" novalidate>
+          <div class="field">
+            <label for="name">Service name</label>
+            <input type="text" id="name" name="name" placeholder="e.g. Netflix" autocomplete="off" />
+            <p class="field__error" data-error-for="name"></p>
+          </div>
+
+          <div class="field">
+            <label for="cost">Cost</label>
+            <input type="number" id="cost" name="cost" placeholder="0.00" min="0" step="0.01" inputmode="decimal" />
+            <p class="field__error" data-error-for="cost"></p>
+          </div>
+
+          <div class="field">
+            <label for="billingCycle">Billing cycle</label>
+            <select id="billingCycle" name="billingCycle">
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+            <p class="field__error" data-error-for="billingCycle"></p>
+          </div>
+
+          <div class="field">
+            <label for="nextRenewalDate">Next renewal date</label>
+            <input type="date" id="nextRenewalDate" name="nextRenewalDate" />
+            <p class="field__error" data-error-for="nextRenewalDate"></p>
+          </div>
+
+          <div class="field field--action">
+            <button type="submit" class="btn btn--primary">Add subscription</button>
+          </div>
+        </form>
+
+        <p id="form-status" class="form-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <!-- SUBSCRIPTION GRID -->
+      <section class="panel" aria-labelledby="grid-heading">
+        <h2 id="grid-heading" class="panel__title">Your subscriptions</h2>
+
+        <div class="table-wrap">
+          <table class="grid">
+            <thead>
+              <tr>
+                <th scope="col">Service</th>
+                <th scope="col" class="num">Cost</th>
+                <th scope="col">Billing cycle</th>
+                <th scope="col" class="num">Monthly rate</th>
+                <th scope="col">Next renewal</th>
+              </tr>
+            </thead>
+            <tbody id="subscription-rows"></tbody>
+          </table>
+        </div>
+
+        <p id="empty-state" class="empty-state" hidden>
+          No subscriptions yet. Add your first one using the form above.
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="/scripts/app.js"></script>
+</body>
+</html>

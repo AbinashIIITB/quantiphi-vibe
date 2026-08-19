@@ -1,0 +1,21 @@
+{
+  "name": "subscription-tracker-dashboard",
+  "version": "1.0.0",
+  "description": "Personal finance dashboard that aggregates recurring SaaS and streaming subscriptions, tracks renewal dates, and monitors monthly cash-flow burn.",
+  "type": "module",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "subscriptions",
+    "dashboard",
+    "burn-rate",
+    "renewals"
+  ],
+  "license": "MIT"
+}
