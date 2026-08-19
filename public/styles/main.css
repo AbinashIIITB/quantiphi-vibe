@@ -418,6 +418,15 @@ body {
     padding: 20px 14px 48px;
   }
 
+  /* Stack the metric cards rather than squeezing two 30px figures side by side. */
+  .metrics-row {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-card__value {
+    font-size: 26px;
+  }
+
   .entry-form {
     grid-template-columns: 1fr;
   }

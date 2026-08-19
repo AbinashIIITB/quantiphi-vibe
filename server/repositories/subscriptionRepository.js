@@ -77,15 +77,6 @@ export function findAll() {
 }
 
 /**
- * @param {string} id
- * @returns {import('../models/Subscription.js').Subscription | null}
- */
-export function findById(id) {
-  const found = store.get(id);
-  return found ? { ...found } : null;
-}
-
-/**
  * @param {import('../models/Subscription.js').Subscription} subscription
  * @returns {import('../models/Subscription.js').Subscription}
  */

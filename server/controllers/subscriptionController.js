@@ -6,11 +6,12 @@ import { readJsonBody, sendJson } from '../core/http.js';
  * and the service layer; they hold no business logic themselves.
  */
 
-/** GET /api/subscriptions — list plus the metrics block, so one call paints the whole dashboard. */
+/** GET /api/subscriptions — list, metrics, and display settings, so one call paints the whole dashboard. */
 export async function getSubscriptions(req, res) {
   const subscriptions = subscriptionService.listSubscriptions();
   const metrics = subscriptionService.getMetrics();
-  sendJson(res, 200, { success: true, subscriptions, metrics });
+  const meta = subscriptionService.getDisplayMeta();
+  sendJson(res, 200, { success: true, subscriptions, metrics, meta });
 }
 
 /** GET /api/metrics */

@@ -27,10 +27,13 @@ export function createStaticHandler(rootDir) {
     if (req.method !== 'GET' && req.method !== 'HEAD') return false;
 
     const relativePath = pathname === '/' ? 'index.html' : decodeURIComponent(pathname).replace(/^\/+/, '');
-    const absolutePath = path.resolve(rootDir, relativePath);
+    const root = path.resolve(rootDir);
+    const absolutePath = path.resolve(root, relativePath);
 
-    // Reject anything that resolves outside the served root.
-    if (!absolutePath.startsWith(path.resolve(rootDir))) return false;
+    // Reject anything that resolves outside the served root. The trailing
+    // separator matters: without it a sibling directory such as "public-backup"
+    // would satisfy a bare startsWith("…/public") check.
+    if (absolutePath !== root && !absolutePath.startsWith(root + path.sep)) return false;
 
     let stats;
     try {

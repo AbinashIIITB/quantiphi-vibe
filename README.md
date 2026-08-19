@@ -73,11 +73,18 @@ UTC midnight, then diffs them to get `daysUntilRenewal`. A subscription is
 sides to UTC avoids the classic off-by-one bug from comparing local time
 against UTC across a DST boundary.
 
+`renewingSoon` is deliberately **purely date-derived**, matching how the brief
+defines the badge — a row renewing within the window carries the amber badge
+whether or not it is paused. Status is a separate axis and is applied only where
+money is involved: the burn rate (active costs only) and the alert count (active
+renewals only). Keeping the two concerns apart is why a paused row can still
+show `daysUntilRenewal: 2` and its badge without polluting the metrics.
+
 ## API
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/subscriptions` | All subscriptions (enriched) + metrics block |
+| `GET` | `/api/subscriptions` | All subscriptions (enriched) + metrics + display meta |
 | `POST` | `/api/subscriptions` | Validate and create a subscription |
 | `PATCH` | `/api/subscriptions/:id/status` | Toggle Active / Paused |
 | `DELETE` | `/api/subscriptions/:id` | Remove a subscription |
@@ -85,6 +92,11 @@ against UTC across a DST boundary.
 
 **Metrics block:** `totalMonthlyBurn`, `upcomingRenewalsCount`, `activeCount`,
 `pausedCount`, `pausedMonthlySavings`.
+
+**Meta block:** `currency`, `locale`, `currentDate`, `renewalWindowDays`. The UI
+builds its `Intl` formatters and its "within the next N days" label from these,
+so the currency and the 7-day rule are defined once — in `server/config/index.js`
+— rather than being duplicated in the frontend.
 
 ### Validation
 

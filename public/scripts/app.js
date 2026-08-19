@@ -3,6 +3,7 @@ import {
   renderSubscriptionRows,
   renderMetrics,
   renderFieldErrors,
+  applyDisplayMeta,
   setStatus,
 } from './render.js';
 
@@ -21,7 +22,9 @@ const emptyState = document.getElementById('empty-state');
 /** Fetches the current list + metrics and repaints the dashboard. */
 async function refresh() {
   try {
-    const { subscriptions, metrics } = await fetchSubscriptions();
+    const { subscriptions, metrics, meta } = await fetchSubscriptions();
+    // Adopt the server's currency/locale/window settings before anything is formatted.
+    applyDisplayMeta(meta);
     renderSubscriptionRows(rowsNode, subscriptions, handleToggleStatus);
     renderMetrics(metrics);
     emptyState.hidden = subscriptions.length > 0;

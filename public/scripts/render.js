@@ -5,19 +5,47 @@
  * computed. No business rule (normalization, totals, urgency) lives here.
  */
 
-const currencyFormatter = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+/**
+ * Formatters are built from the locale and currency the server reports, so the
+ * UI never hardcodes a business setting that config/index.js already owns.
+ * These defaults only apply for the moment before the first response lands.
+ */
+let currencyFormatter = buildCurrencyFormatter('en-IN', 'INR');
+let dateFormatter = buildDateFormatter('en-IN');
 
-const dateFormatter = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
+function buildCurrencyFormatter(locale, currency) {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function buildDateFormatter(locale) {
+  return new Intl.DateTimeFormat(locale, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+/**
+ * Adopts the server's display settings. Called before each render pass.
+ *
+ * @param {{locale: string, currency: string, renewalWindowDays: number}} meta
+ */
+export function applyDisplayMeta(meta) {
+  if (!meta) return;
+  currencyFormatter = buildCurrencyFormatter(meta.locale, meta.currency);
+  dateFormatter = buildDateFormatter(meta.locale);
+
+  const alertHint = document.getElementById('metric-alert-hint');
+  if (alertHint) {
+    alertHint.textContent = `Within the next ${meta.renewalWindowDays} days`;
+  }
+}
 
 export function formatCurrency(value) {
   return currencyFormatter.format(Number(value) || 0);

@@ -3,7 +3,7 @@ import { createSubscription } from '../models/Subscription.js';
 import { validateSubscriptionInput, validateStatusInput } from '../validators/subscriptionValidator.js';
 import { toMonthlyRate, calculateTotalMonthlyBurn, calculatePausedSavings, round2 } from './costEngine.js';
 import { daysUntilRenewal, isRenewingSoon } from './dateEngine.js';
-import { STATUSES } from '../config/index.js';
+import { STATUSES, config } from '../config/index.js';
 import { ApiError } from '../core/ApiError.js';
 
 /**
@@ -19,6 +19,11 @@ import { ApiError } from '../core/ApiError.js';
  * - `monthlyCost`: Cost Uniformity Engine output.
  * - `daysUntilRenewal` / `renewingSoon`: Date Intersect Calculator output.
  *
+ * `renewingSoon` is purely date-derived, exactly as the brief defines the badge:
+ * a renewal date falling within the alert window flags the row regardless of
+ * whether the subscription is currently paused. Status is a separate concern and
+ * is applied where it actually belongs — the burn rate and the alert count.
+ *
  * @param {import('../models/Subscription.js').Subscription} subscription
  */
 function enrich(subscription) {
@@ -27,7 +32,7 @@ function enrich(subscription) {
     ...subscription,
     monthlyCost: round2(toMonthlyRate(subscription.cost, subscription.billingCycle)),
     daysUntilRenewal: days,
-    renewingSoon: subscription.status === STATUSES.ACTIVE && isRenewingSoon(days),
+    renewingSoon: isRenewingSoon(days),
   };
 }
 
@@ -83,6 +88,23 @@ export function deleteSubscription(id) {
 }
 
 /**
+ * Presentation settings the client needs but must not decide for itself:
+ * the currency and locale to format with, the reference date the renewal
+ * maths ran against, and the size of the alert window.
+ *
+ * Serving these keeps the 7-day rule and the currency defined in exactly one
+ * place — server/config/index.js — instead of being duplicated in the UI.
+ */
+export function getDisplayMeta() {
+  return {
+    currency: config.currency,
+    locale: config.locale,
+    currentDate: config.currentDate,
+    renewalWindowDays: config.renewalWindowDays,
+  };
+}
+
+/**
  * Computes the dashboard metrics row.
  *
  * @returns {{
@@ -99,7 +121,13 @@ export function getMetrics() {
 
   const activeCount = enriched.filter((sub) => sub.status === STATUSES.ACTIVE).length;
   const pausedCount = enriched.length - activeCount;
-  const upcomingRenewalsCount = enriched.filter((sub) => sub.renewingSoon).length;
+
+  // The alert card counts money that is actually about to leave the account, so
+  // paused subscriptions are excluded here even though their row still carries
+  // the date-driven "Renewing Soon" badge.
+  const upcomingRenewalsCount = enriched.filter(
+    (sub) => sub.renewingSoon && sub.status === STATUSES.ACTIVE,
+  ).length;
 
   return {
     totalMonthlyBurn: calculateTotalMonthlyBurn(all),
