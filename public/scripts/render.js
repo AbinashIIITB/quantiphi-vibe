@@ -38,21 +38,28 @@ const CYCLE_LABELS = {
  *
  * @param {HTMLElement} tbody
  * @param {object[]} subscriptions Server-enriched subscription records.
+ * @param {(id: string, nextStatus: string) => void} onToggleStatus
  */
-export function renderSubscriptionRows(tbody, subscriptions) {
-  tbody.replaceChildren(...subscriptions.map(buildRow));
+export function renderSubscriptionRows(tbody, subscriptions, onToggleStatus) {
+  tbody.replaceChildren(...subscriptions.map((sub) => buildRow(sub, onToggleStatus)));
 }
 
-function buildRow(sub) {
+function buildRow(sub, onToggleStatus) {
+  const isPaused = sub.status === 'paused';
+
   const row = document.createElement('tr');
   row.dataset.id = sub.id;
+  row.className = [isPaused && 'row--paused', sub.renewingSoon && 'row--renewing-soon']
+    .filter(Boolean)
+    .join(' ');
 
   row.append(
     cell(sub.name, 'service-name'),
     cell(formatCurrency(sub.cost), 'num'),
     cycleCell(sub.billingCycle),
     cell(formatCurrency(sub.monthlyCost), 'num'),
-    cell(formatDate(sub.nextRenewalDate)),
+    renewalCell(sub),
+    statusCell(sub, onToggleStatus),
   );
 
   return row;
@@ -72,6 +79,66 @@ function cycleCell(billingCycle) {
   tag.textContent = CYCLE_LABELS[billingCycle] || billingCycle;
   td.append(tag);
   return td;
+}
+
+function renewalCell(sub) {
+  const td = document.createElement('td');
+  td.append(document.createTextNode(formatDate(sub.nextRenewalDate)));
+
+  if (sub.renewingSoon) {
+    const badge = document.createElement('span');
+    badge.className = 'badge-soon';
+    badge.textContent = 'Renewing Soon';
+    td.append(badge);
+  }
+  return td;
+}
+
+function statusCell(sub, onToggleStatus) {
+  const td = document.createElement('td');
+  const isActive = sub.status === 'active';
+
+  const label = document.createElement('label');
+  label.className = 'status-toggle';
+
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.checked = isActive;
+  input.setAttribute('aria-label', `Toggle ${sub.name} active or paused`);
+  input.addEventListener('change', () => {
+    onToggleStatus(sub.id, input.checked ? 'active' : 'paused');
+  });
+
+  const track = document.createElement('span');
+  track.className = 'status-toggle__track';
+  track.setAttribute('aria-hidden', 'true');
+
+  const text = document.createElement('span');
+  text.className = 'status-toggle__label';
+  text.textContent = isActive ? 'Active' : 'Paused';
+
+  label.append(input, track, text);
+  td.append(label);
+  return td;
+}
+
+/**
+ * Paints the metrics row from the server's metrics block.
+ *
+ * @param {{totalMonthlyBurn: number, upcomingRenewalsCount: number, pausedMonthlySavings: number}} metrics
+ */
+export function renderMetrics(metrics) {
+  document.getElementById('metric-burn-rate').textContent = formatCurrency(metrics.totalMonthlyBurn);
+  document.getElementById('metric-alert-count').textContent = String(metrics.upcomingRenewalsCount);
+
+  const savingsHint = document.getElementById('metric-savings-hint');
+  if (metrics.pausedMonthlySavings > 0) {
+    savingsHint.textContent = `Saving ${formatCurrency(metrics.pausedMonthlySavings)}/mo from paused items`;
+    savingsHint.className = 'metric-card__hint metric-card__hint--savings';
+  } else {
+    savingsHint.textContent = '';
+    savingsHint.className = 'metric-card__hint';
+  }
 }
 
 /**

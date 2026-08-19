@@ -17,6 +17,20 @@
     </header>
 
     <main>
+      <!-- METRICS ROW -->
+      <section class="metrics-row" aria-label="Dashboard metrics">
+        <div class="metric-card">
+          <p class="metric-card__label">Total Monthly Burn Rate</p>
+          <p class="metric-card__value" id="metric-burn-rate">—</p>
+          <p class="metric-card__hint" id="metric-savings-hint"></p>
+        </div>
+        <div class="metric-card">
+          <p class="metric-card__label">Upcoming Renewals Alert Count</p>
+          <p class="metric-card__value" id="metric-alert-count">—</p>
+          <p class="metric-card__hint">Within the next 7 days</p>
+        </div>
+      </section>
+
       <!-- ENTRY FORM -->
       <section class="panel" aria-labelledby="form-heading">
         <h2 id="form-heading" class="panel__title">Add a subscription</h2>
@@ -70,6 +84,7 @@
                 <th scope="col">Billing cycle</th>
                 <th scope="col" class="num">Monthly rate</th>
                 <th scope="col">Next renewal</th>
+                <th scope="col">Status</th>
               </tr>
             </thead>
             <tbody id="subscription-rows"></tbody>

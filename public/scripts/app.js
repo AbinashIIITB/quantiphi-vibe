@@ -1,13 +1,16 @@
-import { fetchSubscriptions, createSubscription } from './api.js';
+import { fetchSubscriptions, createSubscription, updateSubscriptionStatus } from './api.js';
 import {
   renderSubscriptionRows,
+  renderMetrics,
   renderFieldErrors,
   setStatus,
 } from './render.js';
 
 /**
  * Application entry point: wires DOM events to the API and re-renders from
- * whatever the server returns. The client keeps no derived state of its own.
+ * whatever the server returns. The client keeps no derived state of its own —
+ * every number and flag on screen (burn rate, alert count, "Renewing Soon",
+ * monthly rate) comes straight from the API response.
  */
 
 const form = document.getElementById('subscription-form');
@@ -15,14 +18,33 @@ const statusNode = document.getElementById('form-status');
 const rowsNode = document.getElementById('subscription-rows');
 const emptyState = document.getElementById('empty-state');
 
-/** Fetches the current list and repaints the table. */
+/** Fetches the current list + metrics and repaints the dashboard. */
 async function refresh() {
   try {
-    const { subscriptions } = await fetchSubscriptions();
-    renderSubscriptionRows(rowsNode, subscriptions);
+    const { subscriptions, metrics } = await fetchSubscriptions();
+    renderSubscriptionRows(rowsNode, subscriptions, handleToggleStatus);
+    renderMetrics(metrics);
     emptyState.hidden = subscriptions.length > 0;
   } catch (error) {
     setStatus(statusNode, error.message, 'error');
+  }
+}
+
+/**
+ * Handles the row's Active/Paused toggle. Pausing never removes the record —
+ * it flips `status` server-side, which drops that cost out of the burn-rate
+ * sum, and the row repaints greyed out.
+ *
+ * @param {string} id
+ * @param {'active'|'paused'} nextStatus
+ */
+async function handleToggleStatus(id, nextStatus) {
+  try {
+    await updateSubscriptionStatus(id, nextStatus);
+    await refresh();
+  } catch (error) {
+    setStatus(statusNode, error.message, 'error');
+    await refresh(); // revert the toggle to the server's actual state
   }
 }
 

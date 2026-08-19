@@ -10,6 +10,9 @@ export function createApiRouter() {
 
   router.get('/api/subscriptions', controller.getSubscriptions);
   router.post('/api/subscriptions', controller.createSubscriptionHandler);
+  router.patch('/api/subscriptions/:id/status', controller.updateStatusHandler);
+  router.delete('/api/subscriptions/:id', controller.deleteSubscriptionHandler);
+  router.get('/api/metrics', controller.getMetricsHandler);
 
   return router;
 }

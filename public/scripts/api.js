@@ -23,7 +23,7 @@ async function request(path, options = {}) {
   return payload;
 }
 
-/** @returns {Promise<{subscriptions: object[]}>} */
+/** @returns {Promise<{subscriptions: object[], metrics: object}>} */
 export function fetchSubscriptions() {
   return request('/subscriptions');
 }
@@ -33,5 +33,16 @@ export function createSubscription(data) {
   return request('/subscriptions', {
     method: 'POST',
     body: JSON.stringify(data),
+  });
+}
+
+/**
+ * @param {string} id
+ * @param {'active'|'paused'} status
+ */
+export function updateSubscriptionStatus(id, status) {
+  return request(`/subscriptions/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
   });
 }
