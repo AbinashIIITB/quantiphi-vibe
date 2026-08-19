@@ -23,12 +23,21 @@ async function request(path, options = {}) {
   return payload;
 }
 
-/** @returns {Promise<{subscriptions: object[], metrics: object}>} */
+/**
+ * @typedef {{subscriptions: object[], metrics: object, meta: object}} Dashboard
+ * Every endpoint below resolves to this shape, so each response can repaint the
+ * page on its own without a follow-up request.
+ */
+
+/** @returns {Promise<Dashboard>} */
 export function fetchSubscriptions() {
   return request('/subscriptions');
 }
 
-/** @param {object} data Entry form values. */
+/**
+ * @param {object} data Entry form values.
+ * @returns {Promise<Dashboard & {subscription: object}>}
+ */
 export function createSubscription(data) {
   return request('/subscriptions', {
     method: 'POST',
@@ -39,6 +48,7 @@ export function createSubscription(data) {
 /**
  * @param {string} id
  * @param {'active'|'paused'} status
+ * @returns {Promise<Dashboard & {subscription: object}>}
  */
 export function updateSubscriptionStatus(id, status) {
   return request(`/subscriptions/${encodeURIComponent(id)}/status`, {

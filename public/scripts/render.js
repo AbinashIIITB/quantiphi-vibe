@@ -31,20 +31,33 @@ function buildDateFormatter(locale) {
   });
 }
 
+/** Metric nodes are looked up once — they are repainted on every render pass. */
+const metricNodes = {
+  burnRate: document.getElementById('metric-burn-rate'),
+  alertCount: document.getElementById('metric-alert-count'),
+  alertHint: document.getElementById('metric-alert-hint'),
+  savingsHint: document.getElementById('metric-savings-hint'),
+};
+
+/** Remembers the last meta applied, so identical settings skip rebuilding formatters. */
+let appliedMetaKey = '';
+
 /**
- * Adopts the server's display settings. Called before each render pass.
+ * Adopts the server's display settings. Called before each render pass, but the
+ * settings rarely change, so the `Intl` formatters are rebuilt only when they do.
  *
  * @param {{locale: string, currency: string, renewalWindowDays: number}} meta
  */
 export function applyDisplayMeta(meta) {
   if (!meta) return;
+
+  const key = `${meta.locale}|${meta.currency}|${meta.renewalWindowDays}`;
+  if (key === appliedMetaKey) return;
+  appliedMetaKey = key;
+
   currencyFormatter = buildCurrencyFormatter(meta.locale, meta.currency);
   dateFormatter = buildDateFormatter(meta.locale);
-
-  const alertHint = document.getElementById('metric-alert-hint');
-  if (alertHint) {
-    alertHint.textContent = `Within the next ${meta.renewalWindowDays} days`;
-  }
+  metricNodes.alertHint.textContent = `Within the next ${meta.renewalWindowDays} days`;
 }
 
 export function formatCurrency(value) {
@@ -61,6 +74,12 @@ const CYCLE_LABELS = {
   yearly: 'Yearly',
 };
 
+/** Mirrors the server's STATUSES enum; kept here so no status string is inlined. */
+const STATUS = {
+  ACTIVE: 'active',
+  PAUSED: 'paused',
+};
+
 /**
  * Renders the subscription table body.
  *
@@ -69,17 +88,27 @@ const CYCLE_LABELS = {
  * @param {(id: string, nextStatus: string) => void} onToggleStatus
  */
 export function renderSubscriptionRows(tbody, subscriptions, onToggleStatus) {
-  tbody.replaceChildren(...subscriptions.map((sub) => buildRow(sub, onToggleStatus)));
+  // Rows are assembled off-document in a fragment, so the table reflows once
+  // rather than once per row.
+  const fragment = document.createDocumentFragment();
+  for (const sub of subscriptions) {
+    fragment.append(buildRow(sub, onToggleStatus));
+  }
+  tbody.replaceChildren(fragment);
+}
+
+/** Modifier classes a row can carry. The two are independent and can co-occur. */
+function rowModifiers(sub) {
+  const classNames = [];
+  if (sub.status === STATUS.PAUSED) classNames.push('row--paused');
+  if (sub.renewingSoon) classNames.push('row--renewing-soon');
+  return classNames.join(' ');
 }
 
 function buildRow(sub, onToggleStatus) {
-  const isPaused = sub.status === 'paused';
-
   const row = document.createElement('tr');
   row.dataset.id = sub.id;
-  row.className = [isPaused && 'row--paused', sub.renewingSoon && 'row--renewing-soon']
-    .filter(Boolean)
-    .join(' ');
+  row.className = rowModifiers(sub);
 
   row.append(
     cell(sub.name, 'service-name'),
@@ -124,7 +153,7 @@ function renewalCell(sub) {
 
 function statusCell(sub, onToggleStatus) {
   const td = document.createElement('td');
-  const isActive = sub.status === 'active';
+  const isActive = sub.status === STATUS.ACTIVE;
 
   const label = document.createElement('label');
   label.className = 'status-toggle';
@@ -134,7 +163,7 @@ function statusCell(sub, onToggleStatus) {
   input.checked = isActive;
   input.setAttribute('aria-label', `Toggle ${sub.name} active or paused`);
   input.addEventListener('change', () => {
-    onToggleStatus(sub.id, input.checked ? 'active' : 'paused');
+    onToggleStatus(sub.id, input.checked ? STATUS.ACTIVE : STATUS.PAUSED);
   });
 
   const track = document.createElement('span');
@@ -156,17 +185,18 @@ function statusCell(sub, onToggleStatus) {
  * @param {{totalMonthlyBurn: number, upcomingRenewalsCount: number, pausedMonthlySavings: number}} metrics
  */
 export function renderMetrics(metrics) {
-  document.getElementById('metric-burn-rate').textContent = formatCurrency(metrics.totalMonthlyBurn);
-  document.getElementById('metric-alert-count').textContent = String(metrics.upcomingRenewalsCount);
+  const { burnRate, alertCount, savingsHint } = metricNodes;
 
-  const savingsHint = document.getElementById('metric-savings-hint');
-  if (metrics.pausedMonthlySavings > 0) {
-    savingsHint.textContent = `Saving ${formatCurrency(metrics.pausedMonthlySavings)}/mo from paused items`;
-    savingsHint.className = 'metric-card__hint metric-card__hint--savings';
-  } else {
-    savingsHint.textContent = '';
-    savingsHint.className = 'metric-card__hint';
-  }
+  burnRate.textContent = formatCurrency(metrics.totalMonthlyBurn);
+  alertCount.textContent = String(metrics.upcomingRenewalsCount);
+
+  const isSaving = metrics.pausedMonthlySavings > 0;
+  savingsHint.textContent = isSaving
+    ? `Saving ${formatCurrency(metrics.pausedMonthlySavings)}/mo from paused items`
+    : '';
+  savingsHint.className = isSaving
+    ? 'metric-card__hint metric-card__hint--savings'
+    : 'metric-card__hint';
 }
 
 /**

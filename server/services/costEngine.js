@@ -26,22 +26,34 @@ export function toMonthlyRate(cost, billingCycle) {
 }
 
 /**
- * Sums the monthly rates of the subscriptions given.
+ * Sums the monthly rates of every subscription matching `predicate`.
+ *
+ * Filtering inside the loop rather than via `.filter().reduce()` keeps this to a
+ * single pass with no intermediate array allocated per call — the metrics run on
+ * every request, so the throwaway arrays add up.
  *
  * Rounding happens once, on the final total, rather than per subscription:
  * rounding each yearly item first (e.g. 1499/12 = 124.9166 -> 124.92) and then
  * summing would accumulate a few paise of drift across many rows.
  *
  * @param {import('../models/Subscription.js').Subscription[]} subscriptions
+ * @param {(sub: import('../models/Subscription.js').Subscription) => boolean} [predicate]
  * @returns {number} Total monthly cost, rounded to 2 decimals.
  */
-export function sumMonthlyRates(subscriptions) {
-  const total = subscriptions.reduce(
-    (runningTotal, sub) => runningTotal + toMonthlyRate(sub.cost, sub.billingCycle),
-    0,
-  );
+export function sumMonthlyRates(subscriptions, predicate) {
+  let total = 0;
+  for (const sub of subscriptions) {
+    if (predicate && !predicate(sub)) continue;
+    total += toMonthlyRate(sub.cost, sub.billingCycle);
+  }
   return round2(total);
 }
+
+/** True when a subscription is currently active. */
+const isActive = (sub) => sub.status === STATUSES.ACTIVE;
+
+/** True when a subscription is currently paused. */
+const isPaused = (sub) => sub.status === STATUSES.PAUSED;
 
 /**
  * Total Monthly Burn Rate — the headline dashboard metric.
@@ -54,7 +66,7 @@ export function sumMonthlyRates(subscriptions) {
  * @returns {number}
  */
 export function calculateTotalMonthlyBurn(subscriptions) {
-  return sumMonthlyRates(subscriptions.filter((sub) => sub.status === STATUSES.ACTIVE));
+  return sumMonthlyRates(subscriptions, isActive);
 }
 
 /**
@@ -65,7 +77,7 @@ export function calculateTotalMonthlyBurn(subscriptions) {
  * @returns {number}
  */
 export function calculatePausedSavings(subscriptions) {
-  return sumMonthlyRates(subscriptions.filter((sub) => sub.status === STATUSES.PAUSED));
+  return sumMonthlyRates(subscriptions, isPaused);
 }
 
 /** Rounds to 2 decimal places. */

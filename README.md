@@ -170,8 +170,13 @@ The service only flips the `status` field — the record stays in the
 repository. Because `calculateTotalMonthlyBurn` filters on `status === 'active'`,
 the Total Monthly Burn Rate card drops that cost immediately in the response,
 giving a real-time savings simulation. The frontend repaints the row with a
-greyed-out `row--paused` class and re-renders the metrics from the response;
-it never deletes anything from the DOM's data source, matching the server.
+greyed-out `row--paused` class and re-renders the metrics from that same
+response; it never deletes anything from the DOM's data source, matching the
+server.
+
+The paused row keeps its "Renewing Soon" badge if the date still warrants one —
+the badge answers "when is this due?", not "am I paying for it?" — but it stops
+contributing to both the burn rate and the alert count.
 
 ## API reference
 
@@ -183,6 +188,13 @@ it never deletes anything from the DOM's data source, matching the server.
 | `DELETE` | `/api/subscriptions/:id` | Remove a subscription. |
 | `GET` | `/api/metrics` | Metrics block alone. |
 
+Every endpoint except `/api/metrics` answers with the **same dashboard shape** —
+`{ subscriptions, metrics, meta }` — and `POST`/`PATCH` add the affected
+`subscription` on top. That means a create or a toggle repaints from its own
+response instead of triggering a follow-up `GET`: one round trip per action, one
+render path in the client, and the server still the sole authority on every
+number on screen.
+
 **Each subscription** returned by the API includes server-computed fields on
 top of the stored record: `monthlyCost` (Cost Uniformity Engine output),
 `daysUntilRenewal`, and `renewingSoon` (Date Intersect Calculator output).
@@ -190,7 +202,7 @@ top of the stored record: `monthlyCost` (Cost Uniformity Engine output),
 **Metrics block:** `totalMonthlyBurn`, `upcomingRenewalsCount`, `activeCount`,
 `pausedCount`, `pausedMonthlySavings`.
 
-**Meta block** (from `GET /api/subscriptions` only): `currency`, `locale`,
+**Meta block:** `currency`, `locale`,
 `currentDate`, `renewalWindowDays`. The UI builds its `Intl` formatters and
 its "within the next N days" label from these, so the currency and the
 7-day rule are defined once — in `server/config/index.js` — rather than

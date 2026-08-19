@@ -8,26 +8,36 @@ import {
 } from './render.js';
 
 /**
- * Application entry point: wires DOM events to the API and re-renders from
+ * Application entry point: wires DOM events to the API and repaints from
  * whatever the server returns. The client keeps no derived state of its own —
  * every number and flag on screen (burn rate, alert count, "Renewing Soon",
  * monthly rate) comes straight from the API response.
  */
 
 const form = document.getElementById('subscription-form');
+const submitButton = form.querySelector('button[type="submit"]');
 const statusNode = document.getElementById('form-status');
 const rowsNode = document.getElementById('subscription-rows');
 const emptyState = document.getElementById('empty-state');
 
-/** Fetches the current list + metrics and repaints the dashboard. */
+/**
+ * Single render path. Every endpoint returns the same dashboard shape, so a
+ * create or a toggle repaints from its own response — no follow-up request.
+ *
+ * @param {{subscriptions: object[], metrics: object, meta: object}} dashboard
+ */
+function renderDashboard({ subscriptions, metrics, meta }) {
+  // Adopt the server's currency/locale/window settings before anything is formatted.
+  applyDisplayMeta(meta);
+  renderSubscriptionRows(rowsNode, subscriptions, handleToggleStatus);
+  renderMetrics(metrics);
+  emptyState.hidden = subscriptions.length > 0;
+}
+
+/** Loads the dashboard from scratch. Used on boot and to recover from errors. */
 async function refresh() {
   try {
-    const { subscriptions, metrics, meta } = await fetchSubscriptions();
-    // Adopt the server's currency/locale/window settings before anything is formatted.
-    applyDisplayMeta(meta);
-    renderSubscriptionRows(rowsNode, subscriptions, handleToggleStatus);
-    renderMetrics(metrics);
-    emptyState.hidden = subscriptions.length > 0;
+    renderDashboard(await fetchSubscriptions());
   } catch (error) {
     setStatus(statusNode, error.message, 'error');
   }
@@ -43,18 +53,16 @@ async function refresh() {
  */
 async function handleToggleStatus(id, nextStatus) {
   try {
-    await updateSubscriptionStatus(id, nextStatus);
-    await refresh();
+    renderDashboard(await updateSubscriptionStatus(id, nextStatus));
   } catch (error) {
     setStatus(statusNode, error.message, 'error');
-    await refresh(); // revert the toggle to the server's actual state
+    await refresh(); // snap the toggle back to the server's actual state
   }
 }
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
 
-  const submitButton = form.querySelector('button[type="submit"]');
   submitButton.disabled = true;
   renderFieldErrors(form, {});
   setStatus(statusNode, 'Saving…');
@@ -68,10 +76,10 @@ form.addEventListener('submit', async (event) => {
   };
 
   try {
-    const { subscription } = await createSubscription(payload);
+    const response = await createSubscription(payload);
     form.reset();
-    setStatus(statusNode, `Added ${subscription.name}.`, 'success');
-    await refresh();
+    renderDashboard(response);
+    setStatus(statusNode, `Added ${response.subscription.name}.`, 'success');
   } catch (error) {
     renderFieldErrors(form, error.fieldErrors);
     setStatus(statusNode, error.message, 'error');

@@ -37,14 +37,11 @@ function enrich(subscription) {
 }
 
 /**
- * Lists every subscription, enriched with derived fields.
- * Sorted by nearest renewal date first, so the most urgent rows sit at the top.
+ * Nearest renewal first, so the most urgent rows sit at the top of the grid.
+ * ISO dates sort correctly as plain strings, so no Date objects are allocated.
  */
-export function listSubscriptions() {
-  return repository
-    .findAll()
-    .map(enrich)
-    .sort((a, b) => a.nextRenewalDate.localeCompare(b.nextRenewalDate));
+function byRenewalDate(a, b) {
+  return a.nextRenewalDate < b.nextRenewalDate ? -1 : a.nextRenewalDate > b.nextRenewalDate ? 1 : 0;
 }
 
 /**
@@ -105,35 +102,72 @@ export function getDisplayMeta() {
 }
 
 /**
- * Computes the dashboard metrics row.
- *
- * @returns {{
- *   totalMonthlyBurn: number,
- *   upcomingRenewalsCount: number,
- *   activeCount: number,
- *   pausedCount: number,
- *   pausedMonthlySavings: number,
- * }}
+ * @typedef {Object} Metrics
+ * @property {number} totalMonthlyBurn      Sum of active monthly rates.
+ * @property {number} upcomingRenewalsCount Active renewals inside the alert window.
+ * @property {number} activeCount
+ * @property {number} pausedCount
+ * @property {number} pausedMonthlySavings  Monthly cost currently paused.
  */
-export function getMetrics() {
-  const all = repository.findAll();
-  const enriched = all.map(enrich);
 
-  const activeCount = enriched.filter((sub) => sub.status === STATUSES.ACTIVE).length;
-  const pausedCount = enriched.length - activeCount;
+/**
+ * Derives the metrics row from an already-enriched list.
+ *
+ * Taking the enriched array as an argument rather than re-reading the store is
+ * what lets `getDashboard` compute the whole payload from a single pass of
+ * enrichment instead of doing the date and cost maths twice per request.
+ *
+ * @param {object[]} enriched Output of `enrich`, one entry per subscription.
+ * @returns {Metrics}
+ */
+function computeMetrics(enriched) {
+  let activeCount = 0;
+  let upcomingRenewalsCount = 0;
 
-  // The alert card counts money that is actually about to leave the account, so
-  // paused subscriptions are excluded here even though their row still carries
-  // the date-driven "Renewing Soon" badge.
-  const upcomingRenewalsCount = enriched.filter(
-    (sub) => sub.renewingSoon && sub.status === STATUSES.ACTIVE,
-  ).length;
+  for (const sub of enriched) {
+    if (sub.status !== STATUSES.ACTIVE) continue;
+    activeCount += 1;
+    // The alert card counts money about to leave the account, so paused rows are
+    // excluded here even though they still carry the date-driven badge.
+    if (sub.renewingSoon) upcomingRenewalsCount += 1;
+  }
 
   return {
-    totalMonthlyBurn: calculateTotalMonthlyBurn(all),
+    totalMonthlyBurn: calculateTotalMonthlyBurn(enriched),
     upcomingRenewalsCount,
     activeCount,
-    pausedCount,
-    pausedMonthlySavings: calculatePausedSavings(all),
+    pausedCount: enriched.length - activeCount,
+    pausedMonthlySavings: calculatePausedSavings(enriched),
+  };
+}
+
+/**
+ * Computes the dashboard metrics row.
+ *
+ * @returns {Metrics}
+ */
+export function getMetrics() {
+  return computeMetrics(repository.findAll().map(enrich));
+}
+
+/**
+ * Everything needed to paint the dashboard, built from one pass over the store.
+ *
+ * Every endpoint that changes state returns this same shape, so the client can
+ * repaint directly from the mutation response instead of following it with a
+ * second GET — one round trip per action instead of two, with the server still
+ * the sole authority on every number.
+ *
+ * @returns {{subscriptions: object[], metrics: Metrics, meta: object}}
+ */
+export function getDashboard() {
+  const enriched = repository.findAll().map(enrich);
+  // Metrics are order-independent, so the in-place sort afterwards is safe.
+  const metrics = computeMetrics(enriched);
+
+  return {
+    subscriptions: enriched.sort(byRenewalDate),
+    metrics,
+    meta: getDisplayMeta(),
   };
 }
